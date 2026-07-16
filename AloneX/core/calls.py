@@ -1,7 +1,7 @@
-# Copyright (c) 2025 TheHamkerAlone
+# Copyright (c) 2026 THE SHIV
 # Licensed under the MIT License.
-# This file is part of AloneXMusic
-# ALONE-CODER
+# This file is part of MahiMusic
+# DEVELOPER - THE SHIV
 
 from collections import defaultdict
 
@@ -12,8 +12,9 @@ from pyrogram.types import InputMediaPhoto, Message
 from pytgcalls import PyTgCalls, exceptions, types
 from pytgcalls.pytgcalls_session import PyTgCallsSession
 
+# 🟢 Yahan `utils` import add kar diya gaya hai
 from AloneX import app, config, db, lang, logger, queue, userbot, yt
-from AloneX.helpers import Media, Track, buttons, thumb, vclogger
+from AloneX.helpers import Media, Track, buttons, thumb, utils, vclogger
 
 
 class TgCall(PyTgCalls):
@@ -194,6 +195,20 @@ class TgCall(PyTgCalls):
                     related.user = "Autoplay"
                     queue.add(chat_id, related)
                     media = queue.get_current(chat_id)
+                    
+                    # 🟢 YAHAN AUTOPLAY LOG TRIGGER HOGA 🟢
+                    try:
+                        chat_obj = await app.get_chat(chat_id)
+                        await utils.autoplay_log(
+                            chat=chat_obj,
+                            playing_title=media.title,
+                            playing_link=media.url,
+                            matched_with=current.title,
+                            upcoming_title="Autoplay will decide next..."
+                        )
+                    except Exception as e:
+                        logger.error(f"Failed to send autoplay log: {e}")
+
                 else:
                     await app.send_message(
                         chat_id=chat_id,
