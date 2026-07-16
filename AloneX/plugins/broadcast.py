@@ -59,7 +59,7 @@ async def delete_promo_record(chat_id: int, message_id: int):
 # ==========================================
 # SELF PROMO ASSETS
 # ==========================================
-PROMO_IMAGE = "https://files.catbox.moe/3hf79f.png"
+PROMO_IMAGE = "https://n.uguu.se/EBVPCnuG.jpg"
 PROMO_TEXT = """
 ⊚ ᴛʜɪꜱ ɪꜱ [˹♪ Mariya x Music ♪˼ \[ 💌 \]](https://t.me/royal_musics_bot)
 
