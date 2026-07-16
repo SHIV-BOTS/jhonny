@@ -1,10 +1,11 @@
-# Copyright (c) 2025 TheHamkerAlone
+# Copyright (c) 2026 THE SHIV
 # Licensed under the MIT License.
-# This file is part of AloneXMusic
-#ALONE-CODER
+# This file is part of MahiMusic
+# DEVELOPER - THE SHIV
 
 from random import randint
 from time import time
+from datetime import datetime
 
 from pymongo import AsyncMongoClient
 
@@ -44,6 +45,9 @@ class MongoDB:
 
         self.users = []
         self.usersdb = self.db.users
+
+        # 🆕 NEW: Collection for daily stats (/tdata)
+        self.statsdb = self.db.daily_stats
 
     async def connect(self) -> None:
         """Check if we can connect to the database.
@@ -334,6 +338,42 @@ class MongoDB:
             self.users.extend([user["_id"] async for user in self.usersdb.find()])
         return self.users
 
+    # ==========================================
+    # 🆕 DAILY STATS LOGIC FOR /tdata
+    # ==========================================
+    def get_today_date(self) -> str:
+        return datetime.now().strftime("%Y-%m-%d")
+
+    async def update_today_added(self) -> None:
+        today = self.get_today_date()
+        await self.statsdb.update_one(
+            {"date": today},
+            {"$inc": {"added": 1}},
+            upsert=True
+        )
+
+    async def update_today_removed(self) -> None:
+        today = self.get_today_date()
+        await self.statsdb.update_one(
+            {"date": today},
+            {"$inc": {"removed": 1}},
+            upsert=True
+        )
+
+    async def get_today_added_count(self) -> int:
+        today = self.get_today_date()
+        doc = await self.statsdb.find_one({"date": today})
+        if doc:
+            return doc.get("added", 0)
+        return 0
+
+    async def get_today_removed_count(self) -> int:
+        today = self.get_today_date()
+        doc = await self.statsdb.find_one({"date": today})
+        if doc:
+            return doc.get("removed", 0)
+        return 0
+    # ==========================================
 
     async def migrate_coll(self) -> None:
         from bson import ObjectId
