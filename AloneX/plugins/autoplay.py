@@ -128,3 +128,25 @@ async def close_autoplay_panel(_, query: types.CallbackQuery):
         await query.message.delete()
     except Exception:
         pass
+
+
+# 🆕 YAHAN MUSIC PLAYER WALE BUTTON KO NAYE PANEL SE LINK KIYA HAI
+@app.on_callback_query(filters.regex(r"^AUTOPLAY_PANEL_OPEN\|") & ~app.bl_users)
+async def autoplay_open_panel_cb(_, query: types.CallbackQuery):
+    chat_id = int(query.data.split("|")[1])
+
+    # Get current status
+    try:
+        enabled = await db.get_autoplay(chat_id)
+    except AttributeError:
+        enabled = False
+
+    banner = getattr(config, "AUTOPLAY_BANNER", getattr(config, "START_IMG", "https://files.catbox.moe/zvziwk.jpg"))
+
+    # Ek naya panel bhejo jisme saare naye controls honge
+    await query.message.reply_photo(
+        photo=banner,
+        caption=autoplay_caption(enabled),
+        reply_markup=buttons.autoplay_panel_markup(chat_id, enabled)
+    )
+    await query.answer()
