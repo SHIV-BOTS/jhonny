@@ -10,12 +10,13 @@ import string
 import random
 import re
 import unicodedata
+import yt_dlp
 from urllib.parse import unquote
 from pathlib import Path
 
 from pyrogram import filters, types
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, Message
-from pyrogram.errors import MessageNotModified  # <-- ADDED EXCEPTION IMPORT
+from pyrogram.errors import MessageNotModified
 
 from AloneX import anon, app, config, db, lang, queue, tg, yt
 from AloneX.helpers import buttons, utils
@@ -26,6 +27,23 @@ from AloneX.helpers._play import checkUB
 # =======================================================
 MSG_DOWNLOADING = "➛ 𝐃𝐨𝐰𝐧𝐥𝐨𝐚𝐝𝐢𝐧𝐠 𝐁𝐚𝐛𝐲 𝐩𝐥𝐞𝐚𝐬𝐞 𝐰𝐚𝐢𝐭😁...."
 MSG_STARTING = "➛ 𝐒𝐭𝐚𝐫𝐭𝐢𝐧𝐠 𝐒𝐭𝐫𝐞𝐚𝐦 𝐄𝐧𝐣𝐨𝐲🎵❤️...."
+
+# =======================================================
+# 🚀 DIRECT STREAM EXTRACTOR (FAST PLAYBACK)
+# =======================================================
+def get_direct_stream(video_id, is_video):
+    ydl_opts = {
+        "format": "best[height<=?720]" if is_video else "bestaudio/best",
+        "noplaylist": True,
+        "quiet": True,
+        "no_warnings": True,
+    }
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ytdl:
+            info = ytdl.extract_info(f"https://www.youtube.com/watch?v={video_id}", download=False)
+            return info['url']
+    except Exception:
+        return None
 
 # =======================================================
 # 🚀 STYLISH LIVE PROGRESS BAR (MODERN DOTTED STYLE)
@@ -276,17 +294,27 @@ async def play_hndlr(
             return
 
     if not file.file_path:
+        # Check if local cached file exists first
         fname = f"downloads/{file.id}.{'mp4' if video else 'webm'}"
         if Path(fname).exists():
             file.file_path = fname
         else:
-            # FIX: Safely attempt to edit the text
             try:
-                await sent.edit_text(MSG_DOWNLOADING)
+                await sent.edit_text("➛ 𝐅𝐞𝐭𝐜𝐡𝐢𝐧𝐠 𝐒𝐭𝐫𝐞𝐚𝐦 𝐋𝐢𝐧𝐤...⚡")
             except MessageNotModified:
                 pass
             
-            file.file_path = await yt.download(file.id, video=video)
+            # Fetch direct stream URL instantly without freezing the bot
+            loop = asyncio.get_event_loop()
+            stream_url = await loop.run_in_executor(None, get_direct_stream, file.id, video)
+            
+            if stream_url:
+                file.file_path = stream_url
+                # ✅ Start downloading in the background without blocking the playback
+                asyncio.create_task(yt.download(file.id, video=video))
+            else:
+                # Fallback to normal download if direct fetch fails
+                file.file_path = await yt.download(file.id, video=video)
 
     # FIX: Safely attempt to edit to MSG_STARTING
     try:
