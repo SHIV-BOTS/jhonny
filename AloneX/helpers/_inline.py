@@ -6,6 +6,8 @@ from pyrogram.enums import ButtonStyle
 from AloneX import app, config, lang
 from AloneX.core.lang import lang_codes
 
+# Safe fallback if PREMIUM_EMOJIS is not defined in config
+PREMIUM_EMOJIS = getattr(config, "PREMIUM_EMOJIS", None)
 
 def time_to_seconds(time_str: str) -> int:
     """Helper function to convert time string to seconds"""
@@ -62,48 +64,41 @@ class Inline:
     def cancel_dl(self, text) -> types.InlineKeyboardMarkup:
         return self.ikm([[self.ikb(text=text, callback_data=f"cancel_dl")]])
 
-    def autoplay_markup(self, _lang: dict) -> types.InlineKeyboardMarkup:
-        style = self.get_row_styles()
+    # 🆕 Naya Autoplay Panel System (Purana Hata Diya Gaya Hai)
+    def autoplay_panel_markup(self, chat_id: int, enabled: bool) -> types.InlineKeyboardMarkup:
+        status = "🟢 𝐄ɴᴀʙʟᴇᴅ" if enabled else "🔴 𝐃ɪsᴀʙʟᴇᴅ"
+        
         return self.ikm(
             [
                 [
                     self.ikb(
-                        text=_lang.get("autoplay_panel_enable_btn", "Enable Autoplay"),
-                        callback_data="autoplay_panel enable",
-                        style=style[0],
+                        text="𝐀ᴜᴛᴏ 𝐏ʟᴀʏ 𝐄ɴᴀʙʟᴇ",
+                        callback_data=f"AUTOPLAY_ENABLE|{chat_id}",
+                        style=ButtonStyle.SUCCESS,
+                        icon_custom_emoji_id=random.choice(PREMIUM_EMOJIS) if PREMIUM_EMOJIS else None
+                    ),
+                    self.ikb(
+                        text="𝐀ᴜᴛᴏ 𝐏ʟᴀʏ 𝐃ɪsᴀʙʟᴇ",
+                        callback_data=f"AUTOPLAY_DISABLE|{chat_id}",
+                        style=ButtonStyle.DANGER,
+                        icon_custom_emoji_id=random.choice(PREMIUM_EMOJIS) if PREMIUM_EMOJIS else None
+                    ),
+                ],
+                [
+                    self.ikb(
+                        text=f"𝐀ᴜᴛᴏ 𝐏ʟᴀʏ : {status}",
+                        callback_data="AUTOPLAY_STATUS",
+                        style=ButtonStyle.PRIMARY,
+                        icon_custom_emoji_id=random.choice(PREMIUM_EMOJIS) if PREMIUM_EMOJIS else None
                     )
                 ],
                 [
                     self.ikb(
-                        text=_lang.get("autoplay_panel_info_btn", "Info"),
-                        callback_data="autoplay_panel info",
-                        style=style[1],
-                    ),
-                    self.ikb(
-                        text=_lang.get("close", "⌯ 𝐂ʟσsє ⌯"),
+                        text="⌯ 𝐂ʟσsє ⌯",
                         callback_data="autoplay_panel close",
-                        style=style[1],
-                    ),
-                ],
-            ]
-        )
-
-    def autoplay_info_markup(self, _lang: dict) -> types.InlineKeyboardMarkup:
-        style = self.get_row_styles()
-        return self.ikm(
-            [
-                [
-                    self.ikb(
-                        text=_lang.get("back", "𝐁ᴀᴄᴋ"),
-                        callback_data="autoplay_panel back",
-                        style=style[0],
-                    ),
-                    self.ikb(
-                        text=_lang.get("close", "⌯ 𝐂ʟσsє ⌯"),
-                        callback_data="autoplay_panel close",
-                        style=style[0],
-                    ),
-                ],
+                        style=ButtonStyle.SECONDARY
+                    )
+                ]
             ]
         )
 
