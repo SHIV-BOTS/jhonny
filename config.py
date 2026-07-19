@@ -21,9 +21,9 @@ class Config:
         self.SESSION2 = getenv("SESSION2", None)
         self.SESSION3 = getenv("SESSION3", None)
 
-        self.SUPPORT_CHANNEL = getenv("SUPPORT_CHANNEL", "https://t.me/betabot_support")
-        self.SUPPORT_CHAT = getenv("SUPPORT_CHAT", "https://t.me/betabot_hub")
-        self.OWNER_USERNAME = getenv("OWNER_USERNAME", "https://t.me/sukoon_s")
+        self.SUPPORT_CHANNEL = getenv("SUPPORT_CHANNEL", "https://t.me/Elisa_beat_support")
+        self.SUPPORT_CHAT = getenv("SUPPORT_CHAT", "https://t.me/Elisabeats_support")
+        self.OWNER_USERNAME = getenv("OWNER_USERNAME", "https://t.me/Ruler_of_420")
 
         self.AUTO_END: bool = getenv("AUTO_END", False)
         self.AUTO_LEAVE: bool = getenv("AUTO_LEAVE", False)
@@ -36,9 +36,9 @@ class Config:
         self.DEFAULT_THUMB = getenv("DEFAULT_THUMB", "https://n.uguu.se/EBVPCnuG.jpg")
         
         # --- NEW PING VIDEO LINK ADDED HERE ---
-        self.PING_IMG = getenv("PING_IMG", "https://radare.arzfun.com/api/tg/file?id=BAACAgUAAxkBAAEMsPNqV_Zr0LC9pwmtzWakOIchnXuIdQACiyAAAj56wVbxBM2QDTx3Fz0E&name=ENBUTHB6dnrNmQdH3dLRWe.mp4&header=video/mp4")
+        self.PING_IMG = getenv("PING_IMG", "https://n.uguu.se/flUWqZkM.jpg")
         
-        self.START_IMG = getenv("START_IMG", "https://files.catbox.moe/etdhlr.jpg")
+        self.START_IMG = getenv("START_IMG", "https://n.uguu.se/flUWqZkM.jpg")
         self.START_VIDEO = getenv("START_VIDEO", "https://files.catbox.moe/0v9z4o.mp4")
 
     def check(self):
