@@ -1,8 +1,12 @@
+# Copyright (c) 2026 THE SHIV
+# Licensed under the MIT License.
+# This file is part of MahiMusic
+# DEVELOPER - THE SHIV
+
 import os
 import re
 import asyncio
 import aiohttp
-import yt_dlp
 from py_yt import VideosSearch, Playlist
 from AloneX import logger, config
 from AloneX.helpers import Track, utils
@@ -213,73 +217,43 @@ class YouTube:
             return f"{count / 1_000:.1f}K views"
         return f"{count} views"
 
-    def _extract_related(self, video_id: str) -> dict | None:
-        opts = {
-            "quiet": True,
-            "no_warnings": True,
-            "extract_flat": "in_playlist",
-            "skip_download": True,
-            "ignoreerrors": True,
-            "geo_bypass": True,
-            "socket_timeout": 10,
-            "retries": 1,
-            "extractor_retries": 1,
-            "extractor_args": {"youtube": {"player_client": ["android"]}},
-            "cookiefile": "cookies.txt", 
-            "cachedir": False,  # ✅ CACHE DISABLED
-        }
-        url = f"https://www.youtube.com/watch?v={video_id}&list=RD{video_id}"
-        with yt_dlp.YoutubeDL(opts) as ydl:
-            return ydl.extract_info(url, download=False)
-
-    async def _related_from_mix(
-        self, video_id: str, played: set[str]
-    ) -> Track | None:
-        loop = asyncio.get_event_loop()
+    # ✅ NEW API-BASED AUTOPLAY FETCH (Replaces yt-dlp & cookies.txt)
+    async def _related_from_api(self, video_id: str, played: set[str]) -> Track | None:
+        api_key = getattr(config, "YOUTUBE_API_KEY", None)
+        if not api_key:
+            logger.error("[Autoplay API] YOUTUBE_API_KEY is missing in config!")
+            return None
+            
+        url = f"https://www.googleapis.com/youtube/v3/search?part=snippet&relatedToVideoId={video_id}&type=video&key={api_key}&maxResults=10"
+        
         try:
-            info = await asyncio.wait_for(
-                loop.run_in_executor(None, self._extract_related, video_id),
-                timeout=20,
-            )
-        except asyncio.TimeoutError:
-            logger.warning(f"[Autoplay] Mix fetch timed out for {video_id}.")
-            return None
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url) as resp:
+                    if resp.status == 200:
+                        data = await resp.json()
+                        for item in data.get("items", []):
+                            vid = item.get("id", {}).get("videoId")
+                            if vid and vid not in played:
+                                title = item.get("snippet", {}).get("title", "Unknown Track")
+                                channel = item.get("snippet", {}).get("channelTitle", "YouTube")
+                                thumbnails = item.get("snippet", {}).get("thumbnails", {})
+                                thumb_url = thumbnails.get("high", thumbnails.get("default", {})).get("url")
+                                
+                                return Track(
+                                    id=vid,
+                                    channel_name=channel,
+                                    duration="00:00",
+                                    duration_sec=0,
+                                    title=title[:25],
+                                    thumbnail=thumb_url,
+                                    url=f"https://www.youtube.com/watch?v={vid}",
+                                    view_count="",
+                                    video=False,
+                                )
+                    else:
+                        logger.error(f"[Autoplay API] Failed to fetch related video. Status: {resp.status}")
         except Exception as e:
-            logger.error(f"[Autoplay] Mix fetch failed for {video_id}: {e}")
-            return None
-
-        entries = (info or {}).get("entries") or []
-        for entry in entries:
-            if not entry:
-                continue
-
-            eid = entry.get("id")
-            if not eid or eid in played:
-                continue
-
-            title = entry.get("title") or "Unknown"
-            if title.lower() in ("[deleted video]", "[private video]"):
-                continue
-
-            duration = int(entry.get("duration") or 0)
-            if duration <= 0 or duration > config.DURATION_LIMIT:
-                continue
-
-            thumbs = entry.get("thumbnails") or []
-            thumbnail = thumbs[-1]["url"].split("?")[0] if thumbs else None
-
-            return Track(
-                id=eid,
-                channel_name=entry.get("channel") or entry.get("uploader") or "YouTube",
-                duration=self._format_duration(duration),
-                duration_sec=duration,
-                title=title[:25],
-                thumbnail=thumbnail,
-                url=f"https://www.youtube.com/watch?v={eid}",
-                view_count=self._format_views(entry.get("view_count")),
-                video=False,
-            )
-
+            logger.error(f"[Autoplay API] Fetch Error: {e}")
         return None
 
     async def _related_from_search(
@@ -332,16 +306,15 @@ class YouTube:
         played = set(played or [])
         played.add(current.id)
 
-        related = await self._related_from_mix(current.id, played)
+        # ✅ Call API directly instead of yt-dlp
+        related = await self._related_from_api(current.id, played)
         
         if not related:
-            logger.info(f"[Autoplay] Mix returned nothing for {current.id}, trying search fallback.")
+            logger.info(f"[Autoplay] API returned nothing for {current.id}, trying search fallback.")
             related = await self._related_from_search(current, played)
 
         if related:
-            # ✅ PRE-DOWNLOAD COMMENT KAR DIYA GAYA HAI (Crash rokne ke liye)
             logger.info(f"[Autoplay] Found next track: {related.title}, pre-download skipped.")
-            # asyncio.create_task(self.download(related.id, video=related.video))
             return related
 
         logger.warning(f"[Autoplay] No related track found for {current.id}.")
