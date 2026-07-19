@@ -4,6 +4,7 @@
 # DEVELOPER - THE SHIV
 
 import asyncio
+import aiohttp
 from collections import defaultdict
 
 from ntgcalls import (ConnectionNotFound, TelegramServerError,
@@ -25,6 +26,62 @@ async def _delete_msg(msg: Message, delay: int = 6):
         pass
 
 
+# ----------------------------------------------------
+# 🚀 1. API BASED AUTOPLAY (Find Related Tracks without Cookies)
+# ----------------------------------------------------
+async def get_related_via_api(video_id: str, history: list):
+    api_key = getattr(config, "YOUTUBE_API_KEY", None)
+    if not api_key:
+        return None
+        
+    url = f"https://www.googleapis.com/youtube/v3/search?part=snippet&relatedToVideoId={video_id}&type=video&key={api_key}&maxResults=10"
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    for item in data.get("items", []):
+                        vid = item.get("id", {}).get("videoId")
+                        if vid and vid not in history:
+                            title = item.get("snippet", {}).get("title", "Unknown Track")
+                            return Track(
+                                id=vid,
+                                title=title,
+                                url=f"https://www.youtube.com/watch?v={vid}",
+                                duration="00:00",
+                                user="Autoplay",
+                                video=False
+                            )
+    except Exception as e:
+        logger.error(f"Autoplay API Error: {e}")
+    return None
+
+# ----------------------------------------------------
+# 🚀 2. API BASED STREAM URL (Replaces yt.download & Cookies)
+# ----------------------------------------------------
+async def get_stream_via_api(video_id: str, video: bool = False):
+    # 🔗 USING YOUR CUSTOM API URL HERE
+    api_url = f"https://teaminflex.xyz/streams/{video_id}"
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(api_url) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    audio_streams = data.get("audioStreams", [])
+                    video_streams = data.get("videoStreams", [])
+                    
+                    if video and video_streams:
+                        # Find 720p or highest available video stream
+                        stream = next((s for s in video_streams if s.get("quality") == "720p"), video_streams[0])
+                        return stream.get("url")
+                    elif audio_streams:
+                        # Find highest bitrate audio stream
+                        return audio_streams[0].get("url")
+    except Exception as e:
+        logger.error(f"Stream Fetch API Error: {e}")
+    return None
+
+
 class TgCall(PyTgCalls):
     def __init__(self):
         self.clients = []
@@ -38,28 +95,40 @@ class TgCall(PyTgCalls):
             return
         self.autoplay_prefetching.add(chat_id)
         try:
-            await asyncio.sleep(3) 
+            await asyncio.sleep(2) 
+            
+            # 🚀 MANUAL QUEUE BACKGROUND PREFETCH (USING API)
             try:
                 q = queue.get(chat_id)
                 if q and isinstance(q, list) and len(q) > 1:
                     next_track = q[1]
-                    # ✅ MEMORY FIX: Removed background downloading
-                    # if not next_track.file_path:
-                    #     next_track.file_path = await yt.download(next_track.id, video=next_track.video)
+                    if not next_track.file_path:
+                        try:
+                            # Replaced yt.download with API
+                            next_track.file_path = await get_stream_via_api(next_track.id, video=next_track.video)
+                        except Exception as e:
+                            logger.error(f"Prefetch Queue Download Error: {e}")
                     return 
             except Exception:
                 pass
 
+            # 🚀 AUTOPLAY BACKGROUND PREFETCH (USING API)
             if await db.get_autoplay(chat_id):
                 current = queue.get_current(chat_id)
                 if current and isinstance(current, Track):
-                    related = await yt.get_related(current, self.history[chat_id])
+                    related = await get_related_via_api(current.id, self.history[chat_id])
                     if related:
-                        # ✅ MEMORY FIX: Removed background downloading for autoplay
-                        # related.file_path = await yt.download(related.id, video=related.video)
+                        if not related.file_path:
+                            try:
+                                # Replaced yt.download with API
+                                related.file_path = await get_stream_via_api(related.id, video=related.video)
+                            except Exception as e:
+                                logger.error(f"Prefetch Autoplay Download Error: {e}")
                         self.pending_autoplay[chat_id] = related
         except Exception:
             pass
+        finally:
+            self.autoplay_prefetching.discard(chat_id)
 
     async def pause(self, chat_id: int) -> bool:
         client = await db.get_assistant(chat_id)
@@ -104,7 +173,7 @@ class TgCall(PyTgCalls):
             return await self.play_next(chat_id)
 
         stream = types.MediaStream(
-            media_path=media.file_path,
+            media_path=media.file_path,  # This is now a direct HTTP API URL
             audio_parameters=types.AudioQuality.HIGH,
             video_parameters=types.VideoQuality.HD_720p,
             audio_flags=types.MediaStream.Flags.REQUIRED,
@@ -128,6 +197,7 @@ class TgCall(PyTgCalls):
                     active_msg = await app.send_photo(chat_id=chat_id, photo=_thumb, caption=text, reply_markup=keyboard)
                 media.message_id = active_msg.id
                 
+                # Start prefetching next track in background via API
                 asyncio.create_task(self._prefetch_next(chat_id))
 
         except Exception:
@@ -149,7 +219,7 @@ class TgCall(PyTgCalls):
 
                 if not related:
                     try:
-                        related = await yt.get_related(current, self.history[chat_id])
+                        related = await get_related_via_api(current.id, self.history[chat_id])
                     except Exception:
                         related = None
 
@@ -168,23 +238,39 @@ class TgCall(PyTgCalls):
                     short_title = media.title[:45] + "..." if len(media.title) > 45 else media.title
                     matched_title = current.title[:45] + "..." if current and current.title else "Unknown Track"
                     
-                    # 1. Chat me normal notice 
-                    notice = await app.send_message(chat_id=chat_id, text=f"<blockquote>▶️ <b>Aᴜᴛᴏᴘʟᴀʏ Nᴇxᴛ :</b>\n🎧 <a href='{media.url}'><i>{short_title}</i></a></blockquote>", disable_web_page_preview=True)
+                    _lang = await lang.get_lang(chat_id)
+                    
+                    autoplay_notice_text = _lang.get(
+                        "autoplay_notice", 
+                        "<blockquote>▶️ <b>Aᴜᴛᴏᴘʟᴀʏ Nᴇxᴛ :</b>\n🎧 <a href='{url}'><i>{title}</i></a></blockquote>"
+                    ).format(url=media.url, title=short_title)
+                    
+                    notice = await app.send_message(
+                        chat_id=chat_id, 
+                        text=autoplay_notice_text, 
+                        disable_web_page_preview=True
+                    )
                     asyncio.create_task(_delete_msg(notice, 6))
 
-                    # 2. LOGGER GROUP ME DETAILED LOG (As per your Screenshot)
                     try:
                         chat_info = await app.get_chat(chat_id)
                         chat_title = chat_info.title
                     except Exception:
                         chat_title = "Unknown Chat"
 
-                    log_text = (
-                        f"<blockquote><b>🔁 AUTO-PLAY TRACK STARTED</b>\n\n"
-                        f"<b>🥀 GROUP :</b> {chat_title} [{chat_id}]\n"
-                        f"<b>🎵 PLAYING :</b> <a href='{media.url}'>{short_title}</a>\n"
-                        f"<b>🔗 MATCHED WITH :</b> {matched_title}\n"
-                        f"<b>⏭ UPCOMING :</b> Autoplay will decide next...</blockquote>"
+                    log_text = _lang.get(
+                        "autoplay_log",
+                        "<blockquote><b>🔁 AUTO-PLAY TRACK STARTED</b>\n\n"
+                        "<b>🥀 GROUP :</b> {chat_title} [{chat_id}]\n"
+                        "<b>🎵 PLAYING :</b> <a href='{media_url}'>{short_title}</a>\n"
+                        "<b>🔗 MATCHED WITH :</b> {matched_title}\n"
+                        "<b>⏭ UPCOMING :</b> Autoplay will decide next...</blockquote>"
+                    ).format(
+                        chat_title=chat_title, 
+                        chat_id=chat_id, 
+                        media_url=media.url, 
+                        short_title=short_title, 
+                        matched_title=matched_title
                     )
                     
                     try:
@@ -196,17 +282,23 @@ class TgCall(PyTgCalls):
                             )
                     except Exception:
                         pass
-                    # ----------------------------------------------------
 
             if not media:
                 return await self.stop(chat_id)
 
         _lang = await lang.get_lang(chat_id)
+        
+        # 🚀 Now using Custom API to fetch stream link instead of yt.download()
         if not media.file_path:
             msg = await app.send_message(chat_id=chat_id, text=_lang["play_next"])
-            media.file_path = await yt.download(media.id, video=media.video)
+            media.file_path = await get_stream_via_api(media.id, video=media.video)
         else:
             msg = await app.send_message(chat_id=chat_id, text="⚡")
+
+        # Agar stream link null aati hai kisi error ki wajah se
+        if not media.file_path:
+            await msg.edit_text("⚠️ API Error: Unable to fetch stream URL.")
+            return await self.play_next(chat_id)
 
         media.message_id = msg.id
         await self.play_media(chat_id, msg, media)
