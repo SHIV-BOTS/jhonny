@@ -33,7 +33,7 @@ class Config:
         self.DURATION_LIMIT = int(getenv("DURATION_LIMIT", "17000"))
         self.PLAYLIST_LIMIT = int(getenv("PLAYLIST_LIMIT", "200"))
         self.YOUTUBE_API_KEY = getenv("YOUTUBE_API_KEY", "INFLEX86759628D")
-        self.DEFAULT_THUMB = getenv("DEFAULT_THUMB", "https://n.uguu.se/EBVPCnuG.jpg")
+        self.DEFAULT_THUMB = getenv("DEFAULT_THUMB", "https://h.uguu.se/KUEpvTNX.jpg")
         
         # --- NEW PING VIDEO LINK ADDED HERE ---
         self.PING_IMG = getenv("PING_IMG", "https://n.uguu.se/flUWqZkM.jpg")
