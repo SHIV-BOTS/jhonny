@@ -70,9 +70,9 @@ async def save_gcast_msg(chat_id: int, message_id: int):
 # ==========================================
 # SELF PROMO ASSETS
 # ==========================================
-PROMO_IMAGE = "https://n.uguu.se/EBVPCnuG.jpg"
+PROMO_IMAGE = "https://h.uguu.se/KUEpvTNX.jpg"
 PROMO_TEXT = """
-<blockquote><b>⊚ ᴛʜɪꜱ ɪꜱ <a href="https://t.me/royal_musics_bot">˹♪ Mariya x Music ♪˼ [ 💌 ]</a>
+<blockquote><b>⊚ ᴛʜɪꜱ ɪꜱ <a href="https://t.me/ElysiaBeatsBot">˹♪ Elysia x Music ♪˼ [ 💌 ]</a>
 
 ➻ ᴧ ᴘʀєᴍɪᴜᴍ ᴅєꜱɪɢηєᴅ ϻᴜꜱɪᴄ ᴘʟᴧʏєʀ ʙσᴛ ꜰσʀ ᴛєʟєɢʀᴧϻ ɢʀσᴜᴘ & ᴄʜᴧηηєʟ. 
 🎧 24x7 ᴍᴜꜱɪᴄ • ꜱᴍᴏᴏᴛʜ ᴀɴᴅ ꜰᴀꜱᴛ ᴘʟᴀʏʙᴀᴄᴋ
@@ -90,7 +90,7 @@ def get_random_button():
             [
                 InlineKeyboardButton(
                     "🎵 Aᴅᴅ ᴍᴇ ɪɴ ʏᴏᴜʀ ɢʀᴏᴜᴘ 🎧", 
-                    url=f"https://t.me/royal_musics_bot?startgroup=true",
+                    url=f"https://t.me/ElysiaBeatsBot?startgroup=true",
                     style=styles[0]
                 )
             ]
@@ -191,8 +191,13 @@ async def _broadcast(_, message: types.Message):
         for user in users:
             if not IS_BROADCASTING:
                 break
-            user_id = int(user["user_id"] if isinstance(user, dict) else user)
             try:
+                # ObjectId Bypass Fix
+                raw_id = user["user_id"] if isinstance(user, dict) else user
+                if type(raw_id).__name__ == "ObjectId":
+                    raise ValueError("Skipping ObjectId")
+                user_id = int(raw_id)
+                
                 m = (
                     await app.forward_messages(user_id, y, x)
                     if message.reply_to_message
@@ -212,7 +217,7 @@ async def _broadcast(_, message: types.Message):
                     if m:
                         await save_gcast_msg(user_id, m.id)
                     u_success += 1
-                except:
+                except Exception:
                     u_failed += 1
             except Exception:
                 # Silently catch PEER_ID_INVALID and blocked errors
@@ -227,8 +232,13 @@ async def _broadcast(_, message: types.Message):
         for chat in chats:
             if not IS_BROADCASTING:
                 break
-            chat_id = int(chat["chat_id"] if isinstance(chat, dict) else chat)
             try:
+                # ObjectId Bypass Fix
+                raw_id = chat["chat_id"] if isinstance(chat, dict) else chat
+                if type(raw_id).__name__ == "ObjectId":
+                    raise ValueError("Skipping ObjectId")
+                chat_id = int(raw_id)
+                
                 m = (
                     await app.forward_messages(chat_id, y, x)
                     if message.reply_to_message
@@ -258,9 +268,9 @@ async def _broadcast(_, message: types.Message):
                         try:
                             await m.pin(disable_notification=loud)
                             pinned_cnt += 1
-                        except:
+                        except Exception:
                             pass
-                except:
+                except Exception:
                     g_failed += 1
             except Exception:
                  # Silently catch PEER_ID_INVALID and chat write forbidden errors
@@ -283,7 +293,7 @@ async def _broadcast(_, message: types.Message):
     )
     try:
         await status_msg.edit_text(final_text)
-    except:
+    except Exception:
         pass
 
     # Send Log to Logger Group
@@ -316,7 +326,7 @@ async def _stop_gcast(_, message: types.Message):
                 chat_id=app.logger,
                 text=f"🛑 **Broadcast Stopped**\n👤 **By:** {message.from_user.mention}"
             )
-        except:
+        except Exception:
             pass
     await message.reply_text("✅ **Broadcast stopped successfully.**")
 
@@ -354,15 +364,20 @@ async def run_promo_broadcast(status_message=None):
                 pass
 
     for user in users:
-        user_id = user["user_id"] if isinstance(user, dict) else user
         try:
+            # ObjectId Bypass Fix
+            raw_id = user["user_id"] if isinstance(user, dict) else user
+            if type(raw_id).__name__ == "ObjectId":
+                raise ValueError("Skipping ObjectId")
+            user_id = int(raw_id)
+            
             msg = await app.send_photo(
-                chat_id=int(user_id), 
+                chat_id=user_id, 
                 photo=PROMO_IMAGE, 
                 caption=PROMO_TEXT, 
                 reply_markup=get_random_button()
             )
-            await save_promo_msg(int(user_id), msg.id)
+            await save_promo_msg(user_id, msg.id)
             u_success += 1
         except FloodWait as e:
             await asyncio.sleep(e.value)
@@ -374,15 +389,20 @@ async def run_promo_broadcast(status_message=None):
         await asyncio.sleep(0.5)
 
     for chat in chats:
-        chat_id = chat["chat_id"] if isinstance(chat, dict) else chat
         try:
+            # ObjectId Bypass Fix
+            raw_id = chat["chat_id"] if isinstance(chat, dict) else chat
+            if type(raw_id).__name__ == "ObjectId":
+                raise ValueError("Skipping ObjectId")
+            chat_id = int(raw_id)
+            
             msg = await app.send_photo(
-                chat_id=int(chat_id), 
+                chat_id=chat_id, 
                 photo=PROMO_IMAGE, 
                 caption=PROMO_TEXT, 
                 reply_markup=get_random_button()
             )
-            await save_promo_msg(int(chat_id), msg.id)
+            await save_promo_msg(chat_id, msg.id)
             g_success += 1
         except FloodWait as e:
             await asyncio.sleep(e.value)
