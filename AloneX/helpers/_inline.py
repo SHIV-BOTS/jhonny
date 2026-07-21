@@ -95,7 +95,7 @@ class Inline:
                 [
                     self.ikb(
                         text="⌯ 𝐂ʟσsє ⌯",
-                        callback_data="close", # 🛠️ FIXED: Changed from "autoplay_panel close"
+                        callback_data="close",
                         style=ButtonStyle.DANGER
                     )
                 ]
@@ -148,10 +148,11 @@ class Inline:
             )
             
             # 🛠️ YAHAN PAR BUTTON KO PANEL OPEN SE LINK KIYA GAYA HAI
+            # ᴄʟᴏɴᴇ-ᴍᴇ KI JAGAH ᴀᴅᴅ-ᴍᴇ LAGAYA GAYA HAI
             keyboard.append(
                 [
                     self.ikb(text="▶️ 𝐀ᴜᴛᴏ-𝐏ʟᴀʏ", callback_data=f"AUTOPLAY_PANEL_OPEN|{chat_id}", style=style[2]),
-                    self.ikb(text="ᴄʟᴏɴᴇ-ᴍᴇ", url="https://t.me/clone_MUSICrobot", style=style[2]),
+                    self.ikb(text="ᴀᴅᴅ-ᴍᴇ", url=f"https://t.me/{app.username}?startgroup=true", style=style[2]),
                 ]
             )
             
@@ -161,13 +162,8 @@ class Inline:
             keyboard.append(
                 [
                     self.ikb(
-                        text="➕ Add Me",
-                        url=f"https://t.me/{app.username}?startgroup=true",
-                        style=style[0],
-                    ),
-                    self.ikb(
                         text=_lang.get("close", "⌯ 𝐂ʟσsє ⌯"),
-                        callback_data="close", # 🛠️ FIXED: Changed from "help close"
+                        callback_data="close",
                         style=style[0],
                     ),
                 ]
@@ -184,7 +180,7 @@ class Inline:
                 [
                     self.ikb(text=_lang.get("back", "🔙 Back"), callback_data="help back", style=style[0]),
                     self.ikb(text=_lang.get("home_btn", "🏠 Home"), callback_data="help home", style=style[0]),
-                    self.ikb(text=_lang.get("close", "🗑 Close"), callback_data="close", style=style[0]), # 🛠️ FIXED
+                    self.ikb(text=_lang.get("close", "🗑 Close"), callback_data="close", style=style[0]),
                 ]
             ]
         else:
@@ -216,7 +212,7 @@ class Inline:
             rows.append(
                 [
                     self.ikb(text=_lang.get("home_btn", "🏠 Home"), callback_data="help home", style=last_style),
-                    self.ikb(text=_lang.get("close", "🗑 Close"), callback_data="close", style=last_style), # 🛠️ FIXED
+                    self.ikb(text=_lang.get("close", "🗑 Close"), callback_data="close", style=last_style),
                 ]
             )
 
