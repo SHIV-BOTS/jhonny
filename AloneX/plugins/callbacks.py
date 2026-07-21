@@ -87,7 +87,8 @@ async def _controls(_, query: types.CallbackQuery):
     elif action == "replay":
         media = queue.get_current(chat_id)
         media.user = user
-        await anon.replay(chat_id)
+        # Fixed the AttributeError: 'TgCall' object has no attribute 'replay'
+        await anon.seek(chat_id, 0)
         status = query.lang["replayed"]
         reply = query.lang["play_replayed"].format(user)
 
@@ -134,9 +135,9 @@ async def _controls(_, query: types.CallbackQuery):
             keyboard = buttons.controls(
                 chat_id, status=status if action != "resume" else None
             )
-        await query.edit_message_text(
-            f"{mtext}\n\n<blockquote>{reply}</blockquote>", reply_markup=keyboard
-        )
+            await query.edit_message_text(
+                f"{mtext}\n\n<blockquote>{reply}</blockquote>", reply_markup=keyboard
+            )
     except:
         pass
 
