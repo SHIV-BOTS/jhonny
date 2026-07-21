@@ -96,16 +96,20 @@ async def restart_cb(_, query: types.CallbackQuery):
 
 @app.on_callback_query(filters.regex("^bot_update$") & app.sudoers)
 async def update_cb(_, query: types.CallbackQuery):
-    await query.message.edit_text("<blockquote><b>⬇️ ꜰᴇᴛᴄʜɪɴɢ ᴜᴘᴅᴀᴛᴇs ꜰʀᴏᴍ ɢɪᴛ...</b></blockquote>")
+    await query.message.edit_text("<blockquote><b>⬇️ ꜰᴇᴛᴄʜɪɴɢ ᴜᴘᴅᴀᴛᴇs ꜰʀᴏᴍ ɢɪᴛ (ꜰᴏʀᴄᴇ ᴘᴜʟʟ)...</b></blockquote>")
     try:
-        # Pushing Git Pull Command to Server
+        # 🛠️ FIXED: Added Force Pull & Clean logic so it never gets stuck
+        cmd = "git fetch --all && git reset --hard HEAD && git clean -fd && git pull"
+        
         process = await asyncio.create_subprocess_shell(
-            "git pull",
+            cmd,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE
         )
         stdout, stderr = await process.communicate()
-        out = stdout.decode()
+        
+        # Combining both stdout and stderr for better error detection
+        out = (stdout.decode() + stderr.decode()).strip()
         
         # Checking Git Output
         if "Already up to date." in out:
