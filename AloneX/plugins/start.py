@@ -37,7 +37,7 @@ async def start(_, message: types.Message):
         await asyncio.sleep(0.3)
         await loading_1.edit_text("<b>ɪ ᴀᴍ ᴀʟɪᴠᴇ ʙᴀʙʏ❤️😌🫣🫣</b>")
         await asyncio.sleep(0.5)
-        await loading_1.edit_text("<b>𝙹𑜼꧊̵ⱺ𝛈𝛈𐔤 ʙᴏᴛs🫣🫣.</b>")
+        await loading_1.edit_text("<b>𝐙𝐀𝐘𝐍 ʙᴏᴛs🫣🫣.</b>")
         await asyncio.sleep(0.5)
         await loading_1.delete()
 
